@@ -14,7 +14,7 @@ on:
 jobs:
   validate-tag:
     name: Validate Tag
-    uses: gainsway/github-workflows/.github/workflows/job.validate-tag.yml@main
+    uses: ./.github/workflows/job.validate-tag.yml
 
   publish:
     runs-on: ubuntu-latest
