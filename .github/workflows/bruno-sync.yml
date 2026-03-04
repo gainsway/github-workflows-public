@@ -1,0 +1,185 @@
+name: Bruno Collection Sync (Template)
+
+# Reusable workflow template for syncing Bruno collections from OpenAPI specs
+# 
+# Usage in your repository's workflow:
+#
+#   jobs:
+#     sync-bruno:
+#       uses: gainsway/github-workflows-public/.github/workflows/bruno-sync.yml@main
+#       with:
+#         spec-path: 'openapi.json'
+#         target-collection: 'bruno-collection/liquid/fund-management-service'
+#       secrets:
+#         GH_PAT: ${{ secrets.GH_PAT }}
+
+on:
+  workflow_call:
+    inputs:
+      spec-path:
+        description: 'Path to the OpenAPI spec JSON file relative to repo root'
+        required: true
+        type: string
+        default: 'openapi.json'
+      
+      target-collection:
+        description: 'Path to the Bruno collection directory in local-dev repo'
+        required: true
+        type: string
+        default: 'bruno-collection/liquid/fund-management-service'
+      
+      local-dev-repo:
+        description: 'Repository containing the Bruno collections'
+        required: false
+        type: string
+        default: 'gainsway/local-dev'
+      
+      scripts-path:
+        description: 'Path to the sync scripts in this workflow repository'
+        required: false
+        type: string
+        default: 'scripts/bruno-sync'
+      
+      node-version:
+        description: 'Node.js version to use'
+        required: false
+        type: string
+        default: '20'
+      
+      branches:
+        description: 'Comma-separated list of branches to trigger on (if using workflow_call from push)'
+        required: false
+        type: string
+        default: 'main,master'
+    
+    secrets:
+      GH_PAT:
+        description: 'Personal Access Token with repo scope for local-dev access'
+        required: true
+
+jobs:
+  sync-bruno:
+    name: Sync Bruno Collection
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout service repository
+        uses: actions/checkout@v4
+        with:
+          path: service
+          fetch-depth: 0
+
+      - name: Checkout local-dev repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.local-dev-repo }}
+          token: ${{ secrets.GH_PAT }}
+          path: local-dev
+
+      - name: Resolve workflow repository source
+        id: workflow_source
+        shell: bash
+        run: |
+          WORKFLOW_REF="${{ github.workflow_ref }}"
+          echo "repo=${WORKFLOW_REF%%/.github/workflows/*}" >> "$GITHUB_OUTPUT"
+          echo "ref=${WORKFLOW_REF##*@}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout workflow repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ steps.workflow_source.outputs.repo }}
+          ref: ${{ steps.workflow_source.outputs.ref }}
+          path: workflow-repo
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+
+      - name: Install dependencies
+        working-directory: workflow-repo/${{ inputs.scripts-path }}
+        run: npm ci
+
+      - name: Verify spec file exists
+        run: |
+          if [ ! -f "${{ github.workspace }}/service/${{ inputs.spec-path }}" ]; then
+            echo "❌ Spec file not found: ${{ inputs.spec-path }}"
+            exit 1
+          fi
+          echo "✅ Spec file found: ${{ inputs.spec-path }}"
+
+      - name: Sync Bruno collection
+        id: sync
+        working-directory: workflow-repo/${{ inputs.scripts-path }}
+        run: |
+          echo "🔄 Running Bruno collection sync..."
+          echo "Spec: ${{ github.workspace }}/service/${{ inputs.spec-path }}"
+          echo "Target: ${{ github.workspace }}/local-dev/${{ inputs.target-collection }}"
+          
+          node generate-bruno-collection.mjs \
+            --spec "${{ github.workspace }}/service/${{ inputs.spec-path }}" \
+            --target "${{ github.workspace }}/local-dev/${{ inputs.target-collection }}" \
+            --clean
+          
+          echo "✅ Sync completed successfully"
+
+      - name: Check for changes
+        id: check_changes
+        working-directory: local-dev
+        run: |
+          git add -A
+          if git diff --cached --quiet; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ No changes to commit - collection is up to date"
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "📝 Changes detected:"
+            git diff --cached --stat | tail -n 1
+          fi
+
+      - name: Commit and push changes
+        if: steps.check_changes.outputs.changed == 'true'
+        working-directory: local-dev
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Get the triggering repository info
+          SERVICE_REPO="${{ github.repository }}"
+          SERVICE_SHA="${{ github.sha }}"
+          SERVICE_REF="${{ github.ref_name }}"
+          
+          git commit -m "$(cat <<EOF
+          chore: sync bruno collection with ${SERVICE_REPO}
+
+          Automated sync triggered by commit ${SERVICE_SHA:0:7} in ${SERVICE_REPO}
+          Branch: ${SERVICE_REF}
+          Spec file: ${{ inputs.spec-path }}
+          Target collection: ${{ inputs.target-collection }}
+
+          Changes:
+          $(git diff --cached --stat | tail -1)
+          EOF
+          )"
+          
+          git push
+          echo "✅ Changes pushed to ${{ inputs.local-dev-repo }}"
+
+      - name: Summary
+        run: |
+          echo "## Bruno Collection Sync Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Source Repository | ${{ github.repository }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Source Commit | ${{ github.sha }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Spec File | ${{ inputs.spec-path }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Target Collection | ${{ inputs.target-collection }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Changes Detected | ${{ steps.check_changes.outputs.changed }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ steps.check_changes.outputs.changed }}" == "true" ]; then
+            echo "✅ Collection updated and pushed to ${{ inputs.local-dev-repo }}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "ℹ️ No changes needed - collection is already up to date" >> $GITHUB_STEP_SUMMARY
+          fi
