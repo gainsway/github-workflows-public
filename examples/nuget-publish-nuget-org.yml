@@ -1,0 +1,14 @@
+name: Publish NuGet to NuGet.org
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  publish:
+    uses: gainsway/github-workflows-public/.github/workflows/nuget.publish.nuget.org.yml@main
+    with:
+      dotnet-version: 9.0.x
+    secrets:
+      NUGET_ORG_API_KEY: ${{ secrets.NUGET_ORG_API_KEY }}

@@ -1,0 +1,14 @@
+name: Publish NuGet to GitHub Packages
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  publish:
+    uses: gainsway/github-workflows-public/.github/workflows/nuget.publish.yml@main
+    with:
+      dotnet-version: 9.0.x
+    secrets:
+      NUGET_TOKEN: ${{ secrets.GITHUB_TOKEN }}
