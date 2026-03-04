@@ -44,7 +44,7 @@ on:
         description: 'Node.js version to use'
         required: false
         type: string
-        default: '20'
+        default: '24'
       
       branches:
         description: 'Comma-separated list of branches to trigger on (if using workflow_call from push)'
