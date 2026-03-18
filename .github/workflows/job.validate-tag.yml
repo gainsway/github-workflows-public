@@ -1,6 +1,6 @@
 on:
   workflow_call:
-    
+
 jobs:
   validate-tag:
     name: Validate Tag
