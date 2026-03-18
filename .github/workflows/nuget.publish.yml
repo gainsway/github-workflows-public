@@ -29,23 +29,23 @@ jobs:
     env:
       GITHUB_OWNER: gainsway
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 0
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v5
       with:
         dotnet-version: ${{ inputs.dotnet-version }}
     
     - name: Install GitVersion
-      uses: gittools/actions/gitversion/setup@v3
+      uses: gittools/actions/gitversion/setup@v4
       with:
         versionSpec: "6.0.x"
         includePrerelease: true
         
     - name: Determine Version
-      uses: gittools/actions/gitversion/execute@v3
+      uses: gittools/actions/gitversion/execute@v4
       id: gitversion # step id used as reference for output values
       with:
         overrideConfig: |
