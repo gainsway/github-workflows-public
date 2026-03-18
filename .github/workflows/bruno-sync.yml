@@ -64,13 +64,13 @@ jobs:
     
     steps:
       - name: Checkout service repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           path: service
           fetch-depth: 0
 
       - name: Checkout local-dev repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ${{ inputs.local-dev-repo }}
           token: ${{ secrets.GH_PAT }}
@@ -85,14 +85,14 @@ jobs:
           echo "ref=${WORKFLOW_REF##*@}" >> "$GITHUB_OUTPUT"
 
       - name: Checkout workflow repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ${{ steps.workflow_source.outputs.repo }}
           ref: ${{ steps.workflow_source.outputs.ref }}
           path: workflow-repo
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ inputs.node-version }}
 

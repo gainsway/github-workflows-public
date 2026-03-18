@@ -27,7 +27,7 @@ jobs:
       target-collection: bruno-collection/liquid/your-service-name
 
       local-dev-repo: gainsway/local-dev
-      node-version: '20'
+      node-version: '24'
 
     secrets:
       # Personal Access Token with repo scope for local-dev access
