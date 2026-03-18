@@ -1,13 +1,13 @@
 on:
   workflow_call:
-    
+
 jobs:
   validate-tag:
     name: Validate Tag
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v4   
+        uses: actions/checkout@v6
 
       - name: Extract and Validate Tag
         run: |
