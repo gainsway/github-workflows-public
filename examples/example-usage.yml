@@ -1,0 +1,34 @@
+name: Sync Bruno Collection
+
+# Example workflow showing how to use the bruno-sync reusable workflow template
+#
+# This workflow triggers on push to main/master when openapi.json changes
+# and calls the reusable workflow from github-workflows-public
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'openapi.json'
+      - '.github/workflows/sync-bruno.yml'
+
+  workflow_dispatch:
+
+jobs:
+  sync-bruno:
+    uses: gainsway/github-workflows-public/.github/workflows/bruno-sync.yml@main
+    with:
+      # Path to your OpenAPI spec file (relative to repo root)
+      spec-path: openapi.json
+
+      # Path to the target Bruno collection in local-dev repo
+      target-collection: bruno-collection/liquid/your-service-name
+
+      local-dev-repo: gainsway/local-dev
+      node-version: '24'
+
+    secrets:
+      # Personal Access Token with repo scope for local-dev access
+      GH_PAT: ${{ secrets.GH_PAT }}

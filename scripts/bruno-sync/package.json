@@ -1,0 +1,9 @@
+{
+  "name": "bruno-openapi-sync",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "@usebruno/converters": "^0.17.1",
+    "@usebruno/filestore": "^0.7.1"
+  }
+}

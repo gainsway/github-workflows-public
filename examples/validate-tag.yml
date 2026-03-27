@@ -1,0 +1,10 @@
+name: Validate SemVer Tag
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  validate-tag:
+    uses: gainsway/github-workflows-public/.github/workflows/job.validate-tag.yml@main
