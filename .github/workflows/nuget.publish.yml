@@ -20,6 +20,9 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     needs: validate-tag
+    permissions:
+      contents: read
+      packages: write
     if: |
       always() &&
       (needs.validate-tag.result == 'success' || needs.validate-tag.result == 'skipped')
