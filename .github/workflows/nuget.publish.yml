@@ -6,7 +6,7 @@ on:
       dotnet-version:
         required: true
         type: string
-        default: "9.0.x"
+        default: '9.0.x'
     secrets:
       NUGET_TOKEN:
         required: true
@@ -20,6 +20,9 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     needs: validate-tag
+    permissions:
+      contents: read
+      packages: write
     if: |
       always() &&
       (needs.validate-tag.result == 'success' || needs.validate-tag.result == 'skipped')
@@ -41,7 +44,7 @@ jobs:
       - name: Install GitVersion
         uses: gittools/actions/gitversion/setup@v4
         with:
-          versionSpec: "6.x"
+          versionSpec: '6.x'
           includePrerelease: true
 
       - name: Determine Version
@@ -62,5 +65,33 @@ jobs:
       - name: Package
         run: dotnet pack -p:Version='${{ steps.gitversion.outputs.fullSemVer }}' -c Release --output Publish
 
+      - name: Extract package name
+        id: package
+        shell: bash
+        run: |
+          package_file=$(find Publish -maxdepth 1 -type f -name '*.nupkg' ! -name '*.symbols.nupkg' | head -n 1)
+          if [[ -z "$package_file" ]]; then
+            echo "No package found in Publish" >&2
+            exit 1
+          fi
+
+          package_name=$(unzip -p "$package_file" '*.nuspec' | sed -n 's:.*<id>\(.*\)</id>.*:\1:p' | head -n 1)
+          if [[ -z "$package_name" ]]; then
+            echo "Could not extract package name from $package_file" >&2
+            exit 1
+          fi
+
+          echo "package-name=$package_name" >> "$GITHUB_OUTPUT"
+
       - name: Push package to GitHub packages
         run: dotnet nuget push "Publish/*.nupkg" --api-key ${{ secrets.NUGET_TOKEN }} --source "github" --skip-duplicate
+
+      - name: Clean up old pre-release package versions
+        uses: actions/delete-package-versions@e5bc658cc4c965c472efe991f8beea3981499c55 # v5.0.0
+        with:
+          owner: ${{ env.GITHUB_OWNER }}
+          package-name: ${{ steps.package.outputs.package-name }}
+          package-type: nuget
+          token: ${{ secrets.NUGET_TOKEN }}
+          min-versions-to-keep: 10
+          delete-only-pre-release-versions: 'true'
