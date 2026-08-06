@@ -1,0 +1,27 @@
+name: PR Checker
+
+on:
+  workflow_call:
+    inputs:
+      runner:
+        description: Runner label used for the PR checker job
+        required: false
+        type: string
+        default: ubuntu-latest
+
+jobs:
+  pr-checker:
+    name: PR Checker
+    runs-on: ${{ inputs.runner }}
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Check pull request title
+        uses: thehanimo/pr-title-checker@7fbfe05602bdd86f926d3fb3bccb6f3aed43bc70 # v1.4.3
+        with:
+          GITHUB_TOKEN: ${{ github.token }}
+          pass_on_octokit_error: false
+          github_configuration_owner: gainsway
+          github_configuration_repo: .github
+          github_configuration_path: .github/pr-title-checker-config.json
