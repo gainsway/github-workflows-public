@@ -14,7 +14,7 @@ jobs:
     name: PR Checker
     runs-on: ${{ inputs.runner }}
     permissions:
-      contents: write
+      contents: read
       pull-requests: write
     steps:
       - name: Check pull request title
