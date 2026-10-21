@@ -123,6 +123,20 @@ Reusable workflow: `gainsway/github-workflows-public/.github/workflows/nuget.pub
 
 Builds package versions with GitVersion, validates tags when running on tag refs, and pushes `.nupkg` files to GitHub Packages.
 
+After a successful publish, cleanup runs once per distinct package ID extracted from the generated
+`.nuspec` manifests. Multi-package solutions are supported; duplicate IDs are deduplicated
+case-insensitively, and symbol packages are excluded from discovery. Each package retains the
+existing policy: keep 10 prerelease versions and never delete stable versions. Cleanup uses
+`NUGET_TOKEN`, which must have package-deletion access. A failure for one package does not cancel
+cleanup for the others; failures still fail the workflow. No cleanup runs when discovery or publish
+fails. Inputs and reusable workflow outputs are unchanged.
+
+Local discovery regression tests (no package publication/deletion):
+
+```sh
+python3 -m unittest discover -s scripts/tests -v
+```
+
 ### Inputs
 
 | Input | Required | Default | Description |

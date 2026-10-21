@@ -26,6 +26,7 @@ jobs:
     outputs:
       version: ${{ steps.gitversion.outputs.SemVer }}
       commitsSinceVersionSource: ${{ steps.gitversion.outputs.CommitsSinceVersionSource }}
+      package-names: ${{ steps.packages.outputs.package-names }}
     env:
       GITHUB_OWNER: gainsway
     steps:
@@ -62,32 +63,56 @@ jobs:
       - name: Package
         run: dotnet pack -p:Version='${{ steps.gitversion.outputs.fullSemVer }}' -c Release --output Publish
 
-      - name: Extract package name
-        id: package
+      - name: Extract all package names
+        id: packages
         shell: bash
         run: |
-          package_file=$(find Publish -maxdepth 1 -type f -name '*.nupkg' ! -name '*.symbols.nupkg' | head -n 1)
-          if [[ -z "$package_file" ]]; then
-            echo "No package found in Publish" >&2
-            exit 1
-          fi
+          python3 <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          import re
+          import xml.etree.ElementTree as ET
+          import zipfile
 
-          package_name=$(unzip -p "$package_file" '*.nuspec' | sed -n 's:.*<id>\(.*\)</id>.*:\1:p' | head -n 1)
-          if [[ -z "$package_name" ]]; then
-            echo "Could not extract package name from $package_file" >&2
-            exit 1
-          fi
+          package_names = {}
+          for package_file in sorted(Path("Publish").glob("*.nupkg")):
+              if package_file.name.endswith(".symbols.nupkg"):
+                  continue
+              with zipfile.ZipFile(package_file) as package:
+                  manifests = [name for name in package.namelist() if name.endswith(".nuspec")]
+                  if len(manifests) != 1:
+                      raise SystemExit(f"Expected one nuspec in {package_file}")
+                  manifest = ET.fromstring(package.read(manifests[0]))
+                  package_name = manifest.findtext("{*}metadata/{*}id", "").strip()
+              if not re.fullmatch(r"[A-Za-z0-9_.-]{1,100}", package_name):
+                  raise SystemExit(f"Invalid or missing package ID in {package_file}")
+              package_names.setdefault(package_name.lower(), package_name)
 
-          echo "package-name=$package_name" >> "$GITHUB_OUTPUT"
+          if not package_names:
+              raise SystemExit("No packages found in Publish")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write("package-names=" + json.dumps(sorted(package_names.values())) + "\n")
+          PY
 
       - name: Push package to GitHub packages
         run: dotnet nuget push "Publish/*.nupkg" --api-key ${{ secrets.NUGET_TOKEN }} --source "github" --skip-duplicate
 
+  cleanup:
+    name: Clean prereleases (${{ matrix.package-name }})
+    runs-on: ubuntu-latest
+    needs: publish
+    if: ${{ !cancelled() && needs.publish.result == 'success' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        package-name: ${{ fromJSON(needs.publish.outputs.package-names) }}
+    steps:
       - name: Clean up old pre-release package versions
         uses: actions/delete-package-versions@e5bc658cc4c965c472efe991f8beea3981499c55 # v5.0.0
         with:
           owner: ${{ env.GITHUB_OWNER }}
-          package-name: ${{ steps.package.outputs.package-name }}
+          package-name: ${{ matrix.package-name }}
           package-type: nuget
           token: ${{ secrets.NUGET_TOKEN }}
           min-versions-to-keep: 10
