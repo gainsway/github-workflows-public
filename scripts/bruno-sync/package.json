@@ -1,9 +1,13 @@
 {
   "name": "bruno-openapi-sync",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
   "dependencies": {
     "@usebruno/converters": "^0.17.1",
-    "@usebruno/filestore": "^0.7.1"
+    "@usebruno/filestore": "^0.7.1",
+    "yaml": "^2.8.2"
   }
 }
