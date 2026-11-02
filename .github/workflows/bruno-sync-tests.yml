@@ -1,0 +1,20 @@
+name: Test Bruno OpenCollection sync
+on:
+  pull_request:
+    paths: ['scripts/bruno-sync/**', '.github/workflows/bruno-sync.yml']
+  push:
+    branches: [feat/openapi-yaml-pr-sync]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci --ignore-scripts
+        working-directory: scripts/bruno-sync
+      - run: npm test
+        working-directory: scripts/bruno-sync

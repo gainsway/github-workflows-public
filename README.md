@@ -14,54 +14,37 @@ Reusable public GitHub Actions workflows for Gainsway repositories.
 
 ---
 
-## Bruno Collection Sync
+## Bruno OpenCollection YAML sync (draft PR)
 
-Reusable workflow: `gainsway/github-workflows-public/.github/workflows/bruno-sync.yml@main`
+Reusable workflow: `gainsway/github-workflows-public/.github/workflows/bruno-sync.yml@main`.
 
-This workflow:
-- checks out the calling service repository,
-- checks out the target Bruno collection repository,
-- checks out this workflow repository to run the local sync script,
-- generates/updates `.bru` files from an OpenAPI JSON spec,
-- commits and pushes changes to the target repository when changes are detected.
+Call from a service repository whenever its `openapi.json` changes. The workflow
+reads the source OpenAPI 3.x/Swagger 2 document, checks out `gainsway/local-dev`,
+and updates the matching service subfolder **only after the OpenCollection migration
+has merged**. Missing or legacy-format collection roots are rejected.
 
-### Inputs
+The sync matches existing endpoints by HTTP method and normalized path (including
+parameter placeholders). Existing YAML filenames, authentication, environment variables,
+scripts, tests, saved response examples and custom configuration are preserved.
+New request parameters and JSON body properties are merged; removed endpoints
+are **reported but not deleted**. New requests receive deterministic, length-safe
+filenames. A draft PR is created or updated on a stable branch; no direct push
+to `main`. No changes means no PR.
 
-| Input | Required | Default | Description |
-|---|---|---|---|
-| `spec-path` | Yes | `openapi.json` | Path to OpenAPI spec file in the calling repository |
-| `target-collection` | Yes | `bruno-collection/liquid/fund-management-service` | Target collection directory in the target repository |
-| `local-dev-repo` | No | `gainsway/local-dev` | Repository to update with generated Bruno files |
-| `scripts-path` | No | `scripts/bruno-sync` | Path to sync scripts inside this workflow repository |
-| `node-version` | No | `20` | Node.js version for the sync script |
-| `branches` | No | `main,master` | Reserved input for caller-side branch configuration |
+Inputs: `spec-path` (required), `target-collection` (required),
+`local-dev-repo` (default `gainsway/local-dev`), `target-base-ref`
+(default `main`), `scripts-ref` (default `main`), `node-version`
+(default `24`). Secret: `GH_PAT` with Contents and Pull Requests write
+permissions in the target repository. **Pin `scripts-ref` to the same
+version or commit as the reusable workflow** to avoid fetching mismatched
+converter code.
 
-### Secrets
+See [the updated example](examples/example-usage.yml). The legacy
+`.bru` CLI format can still be selected explicitly, but the reusable workflow
+targets OpenCollection YAML. Run the tests with
+`cd scripts/bruno-sync && npm ci && npm test`.
 
-| Secret | Required | Description |
-|---|---|---|
-| `GH_PAT` | Yes | Personal Access Token with `repo` scope to checkout/push target repo |
-
-### Example
-
-```yaml
-name: Sync Bruno Collection
-
-on:
-  push:
-    branches: [main, master]
-    paths: [openapi.json]
-  workflow_dispatch:
-
-jobs:
-  sync-bruno:
-    uses: gainsway/github-workflows-public/.github/workflows/bruno-sync.yml@main
-    with:
-      spec-path: openapi.json
-      target-collection: bruno-collection/liquid/your-service-name
-    secrets:
-      GH_PAT: ${{ secrets.GH_PAT }}
-```
+---
 
 ---
 
