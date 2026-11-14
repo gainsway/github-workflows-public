@@ -64,13 +64,13 @@ jobs:
     
     steps:
       - name: Checkout service repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           path: service
           fetch-depth: 0
 
       - name: Checkout local-dev repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ${{ inputs.local-dev-repo }}
           token: ${{ secrets.GH_PAT }}
@@ -85,14 +85,14 @@ jobs:
           echo "ref=${WORKFLOW_REF##*@}" >> "$GITHUB_OUTPUT"
 
       - name: Checkout workflow repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ${{ steps.workflow_source.outputs.repo }}
           ref: ${{ steps.workflow_source.outputs.ref }}
           path: workflow-repo
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ inputs.node-version }}
 
