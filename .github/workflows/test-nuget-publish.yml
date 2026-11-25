@@ -13,6 +13,10 @@ on:
       - '.github/workflows/test-nuget-publish.yml'
       - 'scripts/tests/test_nuget_package_discovery.py'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
